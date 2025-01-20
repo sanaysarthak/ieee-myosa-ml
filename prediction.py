@@ -242,7 +242,7 @@ def main():
 
     # Extended analysis
     if results and figures:
-        print("Launching web dashboard...")
+        print("\n\nLaunching web dashboard...")
         from extended_analysis import run_extended_analysis
         run_extended_analysis(df, results, figures)
 
