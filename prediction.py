@@ -233,8 +233,8 @@ def main():
             print_analysis_summary(results)
             
             # Show interactive plots
-            for parameter, fig in figures.items():
-                fig.show()
+            # for parameter, fig in figures.items():
+            #    fig.show()
                 
             # Extended analysis
             print("\n\nLaunching web dashboard...")
