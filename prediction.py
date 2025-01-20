@@ -90,11 +90,12 @@ def make_predictions(model, periods=24*7):  # Default to 1 week of predictions
 def analyze_sensor_data(file_path, parameters_to_analyze=None):
     """
     Main function to analyze sensor data and make predictions
+    Returns df, results, and figures
     """
     # Load data
     df = load_and_prepare_data(file_path)
     if df is None:
-        return None, None
+        return None, None, None  # Return None for all three values
     
     if parameters_to_analyze is None:
         parameters_to_analyze = [
@@ -184,7 +185,7 @@ def analyze_sensor_data(file_path, parameters_to_analyze=None):
             print(f"Error analyzing {parameter}: {str(e)}")
             continue
     
-    return results, figures
+    return df, results, figures  # Now returning the DataFrame as well
 
 def print_analysis_summary(results):
     """
@@ -224,8 +225,8 @@ def main():
     ]
     
     try:
-        # Run analysis
-        results, figures = analyze_sensor_data(file_path, parameters)
+        # Run analysis - now capturing the DataFrame
+        df, results, figures = analyze_sensor_data(file_path, parameters)
         
         if results and figures:
             # Print summary
@@ -234,17 +235,17 @@ def main():
             # Show interactive plots
             for parameter, fig in figures.items():
                 fig.show()
+                
+            # Extended analysis
+            print("\n\nLaunching web dashboard...")
+            from extended_analysis import run_extended_analysis
+            run_extended_analysis(df, results, figures)
+            
         else:
             print("No valid results generated. Please check your data and parameters.")
             
     except Exception as e:
         print(f"An error occurred during analysis: {str(e)}")
-
-    # Extended analysis
-    if results and figures:
-        print("\n\nLaunching web dashboard...")
-        from extended_analysis import run_extended_analysis
-        run_extended_analysis(df, results, figures)
 
 if __name__ == "__main__":
     main()
