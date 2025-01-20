@@ -1,8 +1,11 @@
 import streamlit as st
+import pandas as pd
+import numpy as np
 from scipy import stats
 import seaborn as sns
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
+import plotly.graph_objects as go
 import plotly.figure_factory as ff
 from plotly.subplots import make_subplots
 import matplotlib.pyplot as plt
@@ -11,29 +14,18 @@ def detect_anomalies(df, parameter, contamination=0.1):
     """
     Detect anomalies in the sensor data using Isolation Forest
     """
-    # Prepare data for anomaly detection
     data = df[parameter].values.reshape(-1, 1)
-    
-    # Initialize and fit the isolation forest
     iso_forest = IsolationForest(contamination=contamination, random_state=42)
     yhat = iso_forest.fit_predict(data)
-    
-    # Get anomaly scores
     scores = iso_forest.score_samples(data)
-    
-    # Create anomaly mask
     anomalies = yhat == -1
-    
     return anomalies, scores
 
 def create_correlation_analysis(df, parameters):
     """
     Perform correlation analysis between different parameters
     """
-    # Calculate correlation matrix
     corr_matrix = df[parameters].corr()
-    
-    # Create heatmap using plotly
     fig = go.Figure(data=go.Heatmap(
         z=corr_matrix.values,
         x=corr_matrix.columns,
@@ -55,10 +47,8 @@ def create_advanced_visualizations(df, results, parameter):
     """
     Create advanced visualizations for a specific parameter
     """
-    # Detect anomalies
     anomalies, scores = detect_anomalies(df, parameter)
     
-    # Create subplot figure
     fig = make_subplots(
         rows=2, cols=2,
         subplot_titles=(
@@ -69,11 +59,12 @@ def create_advanced_visualizations(df, results, parameter):
         )
     )
     
-    # 1. Time series with anomalies
+    # Add traces without displaying them immediately
     fig.add_trace(
         go.Scatter(x=df['timestamp'], y=df[parameter], name='Normal', mode='lines'),
         row=1, col=1
     )
+    
     fig.add_trace(
         go.Scatter(
             x=df['timestamp'][anomalies],
@@ -85,20 +76,17 @@ def create_advanced_visualizations(df, results, parameter):
         row=1, col=1
     )
     
-    # 2. Distribution plot
     hist_data = [df[parameter].values]
     fig.add_trace(
         go.Histogram(x=df[parameter], name='Distribution', nbinsx=30),
         row=1, col=2
     )
     
-    # 3. Anomaly scores
     fig.add_trace(
         go.Scatter(x=df['timestamp'], y=scores, name='Anomaly Score', mode='lines'),
         row=2, col=1
     )
     
-    # 4. Rolling statistics
     window = 20
     rolling_mean = df[parameter].rolling(window=window).mean()
     rolling_std = df[parameter].rolling(window=window).std()
@@ -107,20 +95,20 @@ def create_advanced_visualizations(df, results, parameter):
         go.Scatter(x=df['timestamp'], y=rolling_mean, name=f'{window}-point Moving Average'),
         row=2, col=2
     )
+    
     fig.add_trace(
         go.Scatter(x=df['timestamp'], y=rolling_std, name=f'{window}-point Standard Deviation'),
         row=2, col=2
     )
     
-    # Update layout
     fig.update_layout(height=800, width=1200, showlegend=True, title=f'Advanced Analysis for {parameter}')
-    
     return fig
 
 def create_streamlit_app(df, results, figures):
     """
     Create a Streamlit web application for interactive visualization
     """
+    st.set_page_config(layout="wide")
     st.title('Livestock Sensor Data Analysis Dashboard')
     
     # Sidebar for parameter selection
@@ -137,9 +125,9 @@ def create_streamlit_app(df, results, figures):
     tab1, tab2, tab3, tab4 = st.tabs(['Predictions', 'Advanced Analysis', 'Anomalies', 'Correlations'])
     
     with tab1:
-        st.plotly_chart(figures[selected_parameter])
+        # Only show the Plotly figure in Streamlit, not in a separate window
+        st.plotly_chart(figures[selected_parameter], use_container_width=True)
         
-        # Display statistics
         st.subheader('Statistical Summary')
         stats_df = pd.DataFrame({
             'Metric': ['Current Value', 'Mean', 'Std Dev', 'Min', 'Max'],
@@ -155,7 +143,7 @@ def create_streamlit_app(df, results, figures):
     
     with tab2:
         advanced_fig = create_advanced_visualizations(df, results, selected_parameter)
-        st.plotly_chart(advanced_fig)
+        st.plotly_chart(advanced_fig, use_container_width=True)
     
     with tab3:
         st.subheader('Anomaly Detection')
@@ -163,7 +151,6 @@ def create_streamlit_app(df, results, figures):
         anomaly_count = anomalies.sum()
         st.write(f'Number of anomalies detected: {anomaly_count}')
         
-        # Create anomaly visualization
         anomaly_fig = go.Figure()
         anomaly_fig.add_trace(go.Scatter(
             x=df['timestamp'],
@@ -178,14 +165,13 @@ def create_streamlit_app(df, results, figures):
             mode='markers',
             marker=dict(color='red', size=8)
         ))
-        st.plotly_chart(anomaly_fig)
+        st.plotly_chart(anomaly_fig, use_container_width=True)
     
     with tab4:
         st.subheader('Correlation Analysis')
         correlation_fig, corr_matrix = create_correlation_analysis(df, list(results.keys()))
-        st.plotly_chart(correlation_fig)
+        st.plotly_chart(correlation_fig, use_container_width=True)
         
-        # Display strongest correlations
         st.subheader('Strongest Correlations')
         correlations = []
         for i in range(len(corr_matrix.columns)):
@@ -204,10 +190,3 @@ def run_extended_analysis(df, results, figures):
     Run the extended analysis and launch the Streamlit app
     """
     create_streamlit_app(df, results, figures)
-
-# Add this to your main() function after the original analysis:
-"""
-if results and figures:
-    print("Launching web dashboard...")
-    run_extended_analysis(df, results, figures)
-"""
